@@ -1,0 +1,9 @@
+body { font-family: 'Montserrat', sans-serif; }
+.animate-fade-in { animation: fadeIn 0.5s ease-out; }
+.animate-fade-fast { animation: fadeIn 0.3s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #0f172a; }
+::-webkit-scrollbar-thumb { background: #7c3aed; border-radius: 4px; }
+.grayscale-card { filter: grayscale(100%); opacity: 0.8; }
+.search-dropdown { max-height: 300px; overflow-y: auto; }
