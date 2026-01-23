@@ -1,21 +1,22 @@
 const { useState, useEffect } = React;
 
 window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocodes }) => {
-    // Встановлюємо 'orders' за замовчуванням, щоб ти одразу побачив результат
+    // Вкладки
     const [tab, setTab] = useState('orders'); 
     
-    // --- НОВЕ: СТАН ЗАМОВЛЕНЬ ---
+    // Стан для замовлень
     const [orders, setOrders] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
-    // ----------------------------
-
+    
+    // Стан для форми редагування товарів
     const [localEditId, setLocalEditId] = useState(null); 
     const [formData, setFormData] = useState(null); 
     const [urlInput, setUrlInput] = useState("");
     
-    // Стан для форми промокодів
+    // Стан для промокодів
     const [promoForm, setPromoForm] = useState({ code: '', type: 'fixed', value: 0, maxUses: 100 });
 
+    // Підключення до бази
     let db = null;
     try { 
         if (window.firebase && firebase.apps.length) {
@@ -25,7 +26,7 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
         console.error(e);
     }
 
-    // --- НОВЕ: ЗАВАНТАЖЕННЯ ЗАМОВЛЕНЬ ---
+    // --- ЗАВАНТАЖЕННЯ ЗАМОВЛЕНЬ ---
     useEffect(() => {
         if (tab === 'orders' && db) {
             setLoadingOrders(true);
@@ -42,35 +43,14 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
             return () => unsubscribe();
         }
     }, [tab, db]);
-    // ------------------------------------
 
-    // --- ТВОЇ ОРИГІНАЛЬНІ ФУНКЦІЇ ---
-
-    const handleExportData = async () => {
-        if (!db) { alert("Ця функція працює тільки з підключеним Firebase!"); return; }
-        const confirmExport = confirm("Експортувати поточні дані товарів у буфер обміну (для data.js)?");
-        if (!confirmExport) return;
-        try {
-            console.log("⏳ Завантажую товари...");
-            const snapshot = await db.collection('products').get();
-            let exportProducts = snapshot.docs.map(doc => {
-                const data = doc.data();
-                delete data.createdAt; 
-                return { id: doc.id, ...data };
-            });
-            exportProducts.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
-            const result = `// --- ОСТАННЄ ОНОВЛЕННЯ: ${new Date().toLocaleString()} ---\nwindow.INITIAL_PRODUCTS_SEED = ${JSON.stringify(exportProducts, null, 4)};`;
-            await navigator.clipboard.writeText(result);
-            alert("✅ ГОТОВО!\n\nКод скопійовано в буфер обміну.");
-        } catch (error) { console.error(error); alert("Помилка експорту."); }
-    };
-
+    // --- ФУНКЦІЇ ДЛЯ ТОВАРІВ ---
     const handleCreateNew = () => {
         const newProduct = {
             id: Date.now(),
             name: "Новий товар",
             price: 0,
-            category: "Вібратори", // Змінив дефолтну категорію під твій магазин
+            category: "Вібратори",
             images: [],
             rating: 5.0,
             specs: [],
@@ -95,6 +75,25 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
             setLocalEditId(newProduct.id);
             setFormData(newProduct);
         }
+    };
+
+    const handleExportData = async () => {
+        if (!db) { alert("Ця функція працює тільки з підключеним Firebase!"); return; }
+        const confirmExport = confirm("Експортувати поточні дані товарів у буфер обміну (для data.js)?");
+        if (!confirmExport) return;
+        try {
+            console.log("⏳ Завантажую товари...");
+            const snapshot = await db.collection('products').get();
+            let exportProducts = snapshot.docs.map(doc => {
+                const data = doc.data();
+                delete data.createdAt; 
+                return { id: doc.id, ...data };
+            });
+            exportProducts.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+            const result = `// --- ОСТАННЄ ОНОВЛЕННЯ: ${new Date().toLocaleString()} ---\nwindow.INITIAL_PRODUCTS_SEED = ${JSON.stringify(exportProducts, null, 4)};`;
+            await navigator.clipboard.writeText(result);
+            alert("✅ ГОТОВО!\n\nКод скопійовано в буфер обміну.");
+        } catch (error) { console.error(error); alert("Помилка експорту."); }
     };
 
     const handleReset = async () => {
@@ -122,7 +121,7 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
                 });
                 await batchAdd.commit();
                 alert("✅ Базу відновлено!");
-            } else { alert("❌ Немає початкових даних (INITIAL_PRODUCTS_SEED)"); }
+            }
         } else {
             if (window.INITIAL_PRODUCTS_SEED) setProducts(window.INITIAL_PRODUCTS_SEED);
             alert("✅ Відновлено (локально)!");
@@ -276,7 +275,7 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
         else setPromocodes(promocodes.map(p => p.id === promo.id ? { ...p, maxUses: newMax } : p));
     };
 
-    // --- РЕНДЕРИНГ: МОДАЛЬНЕ ВІКНО (ТВІЙ ОРИГІНАЛЬНИЙ ДИЗАЙН) ---
+    // --- РЕНДЕРИНГ: МОДАЛЬНЕ ВІКНО ---
     if (localEditId && formData) {
         return (
             <div className="min-h-screen bg-slate-900 py-12 px-4 animate-fade-in">
@@ -406,49 +405,18 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
                     </div>
                 </div>
 
-                {/* --- 1. ВКЛАДКА ЗАМОВЛЕННЯ (НОВА) --- */}
+                {/* --- 1. ВКЛАДКА ЗАМОВЛЕННЯ --- */}
                 {tab === 'orders' && (
                     <div className="space-y-4 animate-fade-in">
-                        <h2 className="text-2xl font-bold mb-4">Останні замовлення</h2>
-                        {orders.length === 0 && !loadingOrders && <div className="text-center py-20 text-gray-500 border-2 border-dashed border-gray-700 rounded-xl">Замовлень поки немає 📭</div>}
-                        {loadingOrders && <div className="text-center py-10 text-violet-400">Завантаження...</div>}
-                        
-                        {orders.map(order => (
-                            <div key={order.id} className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md hover:border-violet-500/50 transition">
-                                <div className="flex justify-between items-start border-b border-white/5 pb-3 mb-3">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-xs font-mono text-violet-400">#{order.id.slice(0,6)}</span>
-                                            <span className="text-xs text-gray-500">{new Date(order.date).toLocaleString()}</span>
-                                        </div>
-                                        <div className="font-bold text-white text-lg">{order.client?.name}</div>
-                                        <div className="text-sm text-violet-300">{order.client?.phone}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-xl font-bold text-green-400">{order.total} ₴</div>
-                                        <div className="text-xs uppercase font-bold tracking-wider text-gray-400">
-                                            {order.paymentMethod === 'card' ? '💳 На карту' : '📦 Післяплата'}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="space-y-1 bg-slate-900/50 p-3 rounded-lg mb-3">
-                                    {order.items?.map((item, i) => (
-                                        <div key={i} className="flex justify-between text-sm text-gray-300">
-                                            <span>• {item.name}</span>
-                                            <span className="text-gray-500 whitespace-nowrap">{item.qty} x {item.price}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="text-xs text-gray-400">
-                                    📍 {order.client?.city}, {order.client?.department} 
-                                    {order.client?.comment && <div className="mt-1 text-yellow-500">⚠️ "{order.client.comment}"</div>}
-                                </div>
-                            </div>
-                        ))}
+                        <h2 className="text-2xl font-bold mb-4">Керування замовленнями</h2>
+                        {window.AdminOrders 
+                            ? <window.AdminOrders orders={orders} products={products} />
+                            : <div className="p-4 bg-red-500/20 text-red-400 rounded-xl border border-red-500/50">Помилка: Файл admin-orders.js не підключено!</div>
+                        }
                     </div>
                 )}
 
-                {/* --- 2. ВКЛАДКА ТОВАРИ (ОРИГІНАЛЬНА) --- */}
+                {/* --- 2. ВКЛАДКА ТОВАРИ --- */}
                 {tab === 'products' && (
                     <>
                         <div className="bg-slate-800 p-4 rounded-2xl border border-white/10 mb-6 flex flex-wrap justify-between items-center gap-4">
@@ -486,7 +454,7 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
                     </>
                 )}
 
-                {/* --- 3. ВКЛАДКА ПРОМОКОДИ (ОРИГІНАЛЬНА) --- */}
+                {/* --- 3. ВКЛАДКА ПРОМОКОДИ --- */}
                 {tab === 'promos' && (
                     <div className="grid lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-1"><div className="bg-slate-800 p-6 rounded-2xl border border-white/10 sticky top-24 shadow-xl"><h3 className="font-bold text-xl mb-6 text-white flex items-center gap-2"><window.Icons.Plus className="text-green-500"/> Новий промокод</h3><form onSubmit={handleCreatePromo} className="space-y-5"><div><label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Код купона</label><input required className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 uppercase text-white font-mono text-lg focus:border-green-500 outline-none" placeholder="Напр. SALE2024" value={promoForm.code} onChange={e=>setPromoForm({...promoForm, code:e.target.value.toUpperCase()})}/></div><div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Тип</label><select className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 text-white outline-none" value={promoForm.type} onChange={e=>setPromoForm({...promoForm, type:e.target.value})}><option value="fixed">Гривні (₴)</option><option value="percent">Відсоток (%)</option></select></div><div><label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Значення</label><input required type="number" className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 text-white outline-none" placeholder="0" value={promoForm.value} onChange={e=>setPromoForm({...promoForm, value:Number(e.target.value)})}/></div></div><div><label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Ліміт використань</label><input required type="number" className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 text-white outline-none" placeholder="100" value={promoForm.maxUses} onChange={e=>setPromoForm({...promoForm, maxUses:Number(e.target.value)})}/></div><button className="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95">Створити промокод</button></form></div></div>
