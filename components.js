@@ -63,7 +63,10 @@ window.Icons = {
     Ticket: (p) => <IconBase {...p}><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/></IconBase>,
     Play: (p) => <IconBase {...p}><polygon points="5 3 19 12 5 21 5 3"></polygon></IconBase>,
     Home: (p) => <IconBase {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></IconBase>,
-    Grid: (p) => <IconBase {...p}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></IconBase>
+    Grid: (p) => <IconBase {...p}><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></IconBase>,
+    User: (p) => <IconBase {...p}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>,
+    MapPin: (p) => <IconBase {...p}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></IconBase>,
+    Clock: (p) => <IconBase {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></IconBase>,
 };
 
 window.BrandLogo = () => (
@@ -81,10 +84,10 @@ window.AddToCartBtn = ({ product, addToCart, variant = 'icon' }) => {
     const [added, setAdded] = useState(false);
     const handleClick = (e) => { e.stopPropagation(); addToCart(product); setAdded(true); setTimeout(() => setAdded(false), 2000); };
     if (product.inStock === false) {
-        if (variant === 'icon') return <button disabled className="p-3 rounded-xl bg-slate-700 text-gray-500 cursor-not-allowed"><window.Icons.ShoppingBag size={20}/></button>;
+        if (variant === 'icon') return <button disabled className="p-2 md:p-3 rounded-xl bg-slate-700 text-gray-500 cursor-not-allowed"><window.Icons.ShoppingBag size={20}/></button>;
         return <button disabled className="flex-1 font-bold py-5 px-8 rounded-2xl bg-slate-700 text-gray-500 cursor-not-allowed flex items-center justify-center gap-3">Немає в наявності</button>;
     }
-    if (variant === 'icon') return (<button onClick={handleClick} className={`p-3 rounded-xl transition-all duration-300 z-20 ${added ? 'bg-green-500 text-white shadow-green-500/50 shadow-lg' : 'bg-white/10 hover:bg-violet-600 text-white'}`} title={added ? "Додано" : "В кошик"}>{added ? <window.Icons.Check size={20}/> : <window.Icons.ShoppingBag size={20}/>}</button>);
+    if (variant === 'icon') return (<button onClick={handleClick} className={`p-2 md:p-3 rounded-xl transition-all duration-300 z-20 ${added ? 'bg-green-500 text-white shadow-green-500/50 shadow-lg' : 'bg-white/10 hover:bg-violet-600 text-white'}`} title={added ? "Додано" : "В кошик"}>{added ? <window.Icons.Check size={20}/> : <window.Icons.ShoppingBag size={20}/>}</button>);
     return (<button onClick={handleClick} className={`flex-1 font-bold py-5 px-8 rounded-2xl shadow-lg flex items-center justify-center gap-3 transition-all duration-300 active:scale-95 ${added ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-violet-600 hover:bg-violet-700 text-white'}`}>{added ? <window.Icons.Check size={24}/> : <window.Icons.ShoppingBag size={24}/>}{added ? 'Додано!' : 'Додати в кошик'}</button>);
 };
 
@@ -117,6 +120,7 @@ window.HeroSlider = () => {
     );
 };
 
+// ЗМІНЕНО: АДАПТАЦІЯ ПІД 2 КОЛОНКИ (МЕНШІ ШРИФТИ І ВІДСТУПИ)
 window.ProductCard = ({ product, navigateToProduct, addToCart, wishlist, toggleWishlist }) => {
     const isLiked = wishlist.includes(product.id);
     const hasVideo = product.images && product.images.length > 0 && window.isVideo(product.images[0]);
@@ -131,19 +135,22 @@ window.ProductCard = ({ product, navigateToProduct, addToCart, wishlist, toggleW
                         </div>
                     ) : <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
                 ) : <div className="w-full h-full flex items-center justify-center bg-slate-800 text-gray-500"><window.Icons.Image size={40}/></div>}
-                <button onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }} className={`absolute top-3 right-3 p-2 rounded-full backdrop-blur-md transition z-20 ${isLiked ? 'bg-pink-600 text-white shadow-lg scale-110' : 'bg-black/30 text-white hover:bg-pink-600'}`}><window.Icons.Heart size={18} fill={isLiked ? "currentColor" : "none"} /></button>
-                <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-                    {product.isHit && <div className="bg-fuchsia-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg flex items-center gap-1"><window.Icons.Flame size={10}/> HIT</div>}
-                    {product.isSale && <div className="bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg flex items-center gap-1"><window.Icons.Tag size={10}/> АКЦІЯ</div>}
+                <button onClick={(e) => { e.stopPropagation(); toggleWishlist(product.id); }} className={`absolute top-2 right-2 md:top-3 md:right-3 p-1.5 md:p-2 rounded-full backdrop-blur-md transition z-20 ${isLiked ? 'bg-pink-600 text-white shadow-lg scale-110' : 'bg-black/30 text-white hover:bg-pink-600'}`}><window.Icons.Heart size={16} fill={isLiked ? "currentColor" : "none"} className="md:w-[18px] md:h-[18px]"/></button>
+                <div className="absolute top-2 left-2 md:top-3 md:left-3 flex flex-col gap-1 md:gap-2 z-10">
+                    {product.isHit && <div className="bg-fuchsia-600 text-white text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded shadow-lg flex items-center gap-1"><window.Icons.Flame size={8} className="md:w-[10px] md:h-[10px]"/> HIT</div>}
+                    {product.isSale && <div className="bg-red-600 text-white text-[8px] md:text-[10px] font-bold px-1.5 py-0.5 md:px-2 md:py-1 rounded shadow-lg flex items-center gap-1"><window.Icons.Tag size={8} className="md:w-[10px] md:h-[10px]"/> АКЦІЯ</div>}
                 </div>
-                {product.inStock === false && <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20"><span className="text-white font-bold text-sm bg-red-600 px-3 py-1 rounded">НЕМАЄ В НАЯВНОСТІ</span></div>}
+                {product.inStock === false && <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-20"><span className="text-white font-bold text-xs md:text-sm bg-red-600 px-2 py-1 rounded">НЕМАЄ</span></div>}
             </div>
-            <div className="p-5 flex-1 flex flex-col">
-                <div className="text-xs font-bold text-violet-400 uppercase tracking-wider mb-2">{product.category}</div>
-                <h3 className="text-lg font-bold text-white mb-1 group-hover:text-violet-300 transition-colors line-clamp-1">{product.name}</h3>
-                <p className="text-sm text-gray-400 mb-2 line-clamp-2">{product.shortDesc}</p>
-                <div className="mt-auto flex items-center justify-between">
-                    <div><span className="text-2xl font-bold text-white">{product.price} ₴</span>{product.oldPrice > 0 && <span className="text-sm text-gray-500 line-through ml-2">{product.oldPrice} ₴</span>}</div>
+            <div className="p-3 md:p-5 flex-1 flex flex-col">
+                <div className="text-[10px] md:text-xs font-bold text-violet-400 uppercase tracking-wider mb-1 md:mb-2">{product.category}</div>
+                <h3 className="text-sm md:text-lg font-bold text-white mb-1 group-hover:text-violet-300 transition-colors line-clamp-1">{product.name}</h3>
+                <p className="text-xs md:text-sm text-gray-400 mb-2 line-clamp-2 hidden md:block">{product.shortDesc}</p>
+                <div className="mt-auto flex items-center justify-between gap-2">
+                    <div className="flex flex-col md:flex-row md:items-end gap-0.5 md:gap-2">
+                        <span className="text-lg md:text-2xl font-bold text-white">{product.price} ₴</span>
+                        {product.oldPrice > 0 && <span className="text-[10px] md:text-sm text-gray-500 line-through">{product.oldPrice} ₴</span>}
+                    </div>
                     <window.AddToCartBtn product={product} addToCart={addToCart} />
                 </div>
             </div>
@@ -160,7 +167,7 @@ window.RecentlyViewed = ({ viewedItems, products, navigateToProduct }) => {
             <h3 className="text-2xl font-bold text-white mb-6">Ви нещодавно переглядали</h3>
             <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                 {viewedProducts.map(p => (
-                    <div key={p.id} onClick={() => navigateToProduct(p.id)} className="min-w-[160px] w-[160px] cursor-pointer group">
+                    <div key={p.id} onClick={() => navigateToProduct(p.id)} className="min-w-[140px] md:min-w-[160px] w-[140px] md:w-[160px] cursor-pointer group">
                         <div className="aspect-[4/5] rounded-xl bg-slate-800 overflow-hidden mb-2 relative"><img src={p.images?.[0]} className="w-full h-full object-cover group-hover:scale-110 transition duration-500" /></div>
                         <div className="text-sm font-bold text-white truncate">{p.name}</div>
                         <div className="text-xs text-gray-400">{p.price} ₴</div>
