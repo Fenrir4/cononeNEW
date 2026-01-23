@@ -8,7 +8,24 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
     
     // Стан для форми промокодів
     const [promoForm, setPromoForm] = useState({ code: '', type: 'fixed', value: 0, maxUses: 100 });
-
+    
+    // --- ДОДАТИ ЦЕ ---
+    const [orders, setOrders] = useState([]);
+    
+    useEffect(() => {
+        if (tab === 'orders' && window.firebase) {
+            const db = firebase.firestore();
+            const unsubscribe = db.collection('orders')
+                .orderBy('date', 'desc')
+                .limit(50)
+                .onSnapshot(snapshot => {
+                    setOrders(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+                });
+            return () => unsubscribe();
+        }
+    }, [tab]);
+    // -----------------
+    
     let db = null;
     try { 
         if (window.firebase && firebase.apps.length) {
@@ -350,6 +367,47 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
         if (db) await db.collection("promocodes").doc(promo.id).update({ maxUses: newMax });
         else setPromocodes(promocodes.map(p => p.id === promo.id ? { ...p, maxUses: newMax } : p));
     };
+    {/* --- ВСТАВИТИ ЦЕЙ БЛОК --- */}
+                {tab === 'orders' && (
+                    <div className="space-y-4 animate-fade-in">
+                        <h2 className="text-2xl font-bold mb-4">Останні замовлення</h2>
+                        {orders.length === 0 && <div className="text-center py-20 text-gray-500 border-2 border-dashed border-gray-700 rounded-xl">Замовлень поки немає 📭</div>}
+                        
+                        {orders.map(order => (
+                            <div key={order.id} className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md hover:border-violet-500/50 transition">
+                                <div className="flex justify-between items-start border-b border-white/5 pb-3 mb-3">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-xs font-mono text-violet-400">#{order.id.slice(0,6)}</span>
+                                            <span className="text-xs text-gray-500">{new Date(order.date).toLocaleString()}</span>
+                                        </div>
+                                        <div className="font-bold text-white text-lg">{order.client?.name}</div>
+                                        <div className="text-sm text-violet-300">{order.client?.phone}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xl font-bold text-green-400">{order.total} ₴</div>
+                                        <div className="text-xs uppercase font-bold tracking-wider text-gray-400">
+                                            {order.paymentMethod === 'card' ? '💳 На карту' : '📦 Післяплата'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-1 bg-slate-900/50 p-3 rounded-lg mb-3">
+                                    {order.items?.map((item, i) => (
+                                        <div key={i} className="flex justify-between text-sm text-gray-300">
+                                            <span>• {item.name}</span>
+                                            <span className="text-gray-500 whitespace-nowrap">{item.qty} x {item.price}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    📍 {order.client?.city}, {order.client?.department} 
+                                    {order.client?.comment && <div className="mt-1 text-yellow-500">⚠️ "{order.client.comment}"</div>}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+                {/* ------------------------- */}
 
     // --- РЕНДЕРИНГ: МОДАЛЬНЕ ВІКНО ---
     if (localEditId && formData) {
@@ -493,46 +551,6 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
                     </div>
                 </div>
 
-                {/* --- 3. ВМІСТ ЗАМОВЛЕНЬ --- */}
-                {tab === 'orders' && (
-                    <div className="space-y-4 animate-fade-in">
-                        <h2 className="text-2xl font-bold mb-4">Останні замовлення</h2>
-                        {orders.length === 0 && <div className="text-center py-20 text-gray-500 border-2 border-dashed border-gray-700 rounded-xl">Замовлень поки немає 📭</div>}
-                        
-                        {orders.map(order => (
-                            <div key={order.id} className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md hover:border-violet-500/50 transition">
-                                <div className="flex justify-between items-start border-b border-white/5 pb-3 mb-3">
-                                    <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-xs font-mono text-violet-400">#{order.id.slice(0,6)}</span>
-                                            <span className="text-xs text-gray-500">{new Date(order.date).toLocaleString()}</span>
-                                        </div>
-                                        <div className="font-bold text-white text-lg">{order.client?.name}</div>
-                                        <div className="text-sm text-violet-300">{order.client?.phone}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-xl font-bold text-green-400">{order.total} ₴</div>
-                                        <div className="text-xs uppercase font-bold tracking-wider text-gray-400">
-                                            {order.paymentMethod === 'card' ? '💳 На карту' : '📦 Післяплата'}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="space-y-1 bg-slate-900/50 p-3 rounded-lg mb-3">
-                                    {order.items?.map((item, i) => (
-                                        <div key={i} className="flex justify-between text-sm text-gray-300">
-                                            <span>• {item.name}</span>
-                                            <span className="text-gray-500 whitespace-nowrap">{item.qty} x {item.price}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="text-xs text-gray-400">
-                                    📍 {order.client?.city}, {order.client?.department} 
-                                    {order.client?.comment && <div className="mt-1 text-yellow-500">⚠️ "{order.client.comment}"</div>}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
                 {tab === 'products' ? (
                     <>
                         <div className="bg-slate-800 p-4 rounded-2xl border border-white/10 mb-6 flex flex-wrap justify-between items-center gap-4">
