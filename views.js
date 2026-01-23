@@ -166,19 +166,26 @@ window.WishlistView = ({ wishlist, products, navigateToProduct, addToCart, toggl
     );
 };
 
-window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, promocodes, applyPromo, appliedPromo, cancelPromo }) => {
-    const [promoInput, setPromoInput] = useState("");
-    const FREE_DELIVERY_LIMIT = 2000;
-    let discountAmount = 0;
-    if (appliedPromo) { discountAmount = appliedPromo.type === 'percent' ? Math.round(cartTotal * (appliedPromo.value / 100)) : appliedPromo.value; }
-    const finalTotal = Math.max(0, cartTotal - discountAmount);
-    const neededForFreeDelivery = Math.max(0, FREE_DELIVERY_LIMIT - finalTotal);
-    const progressPercent = Math.min(100, (finalTotal / FREE_DELIVERY_LIMIT) * 100);
+window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, promocodes, applyPromo, appliedPromo, cancelPromo, setCart }) => {
+    const { useState } = React;
     
+    // СТАН (Логіка)
+    const [promoInput, setPromoInput] = useState("");
     const [formData, setFormData] = useState({ name: '', phone: '', city: '', department: '', payment: 'card', comment: '', telegram: '' });
     const [isSending, setIsSending] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
+    // РОЗРАХУНКИ
+    const FREE_DELIVERY_LIMIT = 2000;
+    let discountAmount = 0;
+    if (appliedPromo) { 
+        discountAmount = appliedPromo.type === 'percent' ? Math.round(cartTotal * (appliedPromo.value / 100)) : appliedPromo.value; 
+    }
+    const finalTotal = Math.max(0, cartTotal - discountAmount);
+    const neededForFreeDelivery = Math.max(0, FREE_DELIVERY_LIMIT - finalTotal);
+    const progressPercent = Math.min(100, (finalTotal / FREE_DELIVERY_LIMIT) * 100);
+
+    // ФУНКЦІЯ ВІДПРАВКИ В БАЗУ
     const handleOrderSubmit = async (e) => {
         e.preventDefault();
         setIsSending(true);
@@ -191,7 +198,7 @@ window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, pr
             discount: discountAmount,
             promoCode: appliedPromo ? appliedPromo.code : null,
             paymentMethod: formData.payment,
-            isFreeShipping: finalTotal >= FREE_DELIVERY_LIMIT, // Перераховуємо тут для надійності
+            isFreeShipping: finalTotal >= FREE_DELIVERY_LIMIT,
             client: {
                 name: formData.name,
                 phone: formData.phone,
@@ -223,94 +230,125 @@ window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, pr
                 }
             }
             setIsSuccess(true);
+            if (setCart) setCart([]); // Очищуємо кошик після успіху
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error("Error:", error);
-            alert("Помилка замовлення. Спробуйте пізніше.");
+            alert("Помилка замовлення. Спробуйте пізніше або напишіть нам.");
         } finally {
             setIsSending(false);
         }
     };
-   // 1. Додай ці стани на початку функції
-    const [formData, setFormData] = React.useState({ name: '', phone: '', city: '', department: '', payment: 'card', comment: '', telegram: '' });
-    const [isSending, setIsSending] = React.useState(false);
-    const [isSuccess, setIsSuccess] = React.useState(false);
 
-    // 2. Додай функцію обробки (вона не міняє дизайн, лише відправляє дані)
-    const handleOrderSubmit = async (e) => {
-        e.preventDefault();
-        setIsSending(true);
-        const orderData = {
-            date: new Date().toISOString(),
-            status: 'new',
-            total: finalTotal,
-            client: formData,
-            items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, qty: item.qty }))
-        };
-        try {
-            if (window.firebase) {
-                await firebase.firestore().collection('orders').add(orderData);
-                setIsSuccess(true);
-                if (typeof setCart === 'function') setCart([]); 
-            }
-        } catch (error) { alert("Помилка відправки"); }
-        setIsSending(false);
-    };
-    
+    // ЕКРАН УСПІХУ
+    if (isSuccess) {
+        return (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6 animate-fade-in">
+                <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-500/30 animate-bounce">
+                    <window.Icons.Check size={48} className="text-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-4">Замовлення прийнято! 🎉</h2>
+                <p className="text-gray-400 mb-8">Ми зв'яжемося з вами найближчим часом для підтвердження.</p>
+                <button onClick={() => changeRoute('home')} className="bg-violet-600 text-white px-8 py-3 rounded-full font-bold">На головну</button>
+            </div>
+        );
+    }
+
+    // ГОЛОВНИЙ ЕКРАН КОШИКА
     return (
         <div className="min-h-screen bg-slate-900 py-12 px-4 animate-fade-in">
             <div className="max-w-3xl mx-auto">
                 <h1 className="text-3xl font-bold text-white mb-8">Кошик</h1>
+                
                 {cart.length === 0 ? (
-                    <div className="text-center py-20 bg-slate-800 rounded-2xl border border-white/10"><Icons.ShoppingBag size={64} className="mx-auto text-gray-600 mb-4"/><p className="text-gray-400">Кошик порожній</p><button onClick={() => changeRoute('home')} className="mt-4 text-violet-400 font-bold">До покупок</button></div>
+                    <div className="text-center py-20 bg-slate-800 rounded-2xl border border-white/10">
+                        <window.Icons.ShoppingBag size={64} className="mx-auto text-gray-600 mb-4"/>
+                        <p className="text-gray-400">Кошик порожній</p>
+                        <button onClick={() => changeRoute('home')} className="mt-4 text-violet-400 font-bold">До покупок</button>
+                    </div>
                 ) : (
                     <div className="space-y-6">
+                        {/* ЛІНІЯ ДОСТАВКИ */}
                         <div className="bg-slate-800 rounded-xl p-4 border border-white/10">
                             {neededForFreeDelivery > 0 ? (
                                 <p className="text-sm text-white mb-2 font-bold">Додайте товарів ще на <span className="text-violet-400">{neededForFreeDelivery} ₴</span> для безкоштовної доставки!</p>
-                            ) : <p className="text-sm text-green-400 mb-2 font-bold flex items-center gap-2"><Icons.Flame size={16}/> Ура! У вас безкоштовна доставка!</p>}
-                            <div className="w-full bg-slate-700 h-2.5 rounded-full overflow-hidden"><div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div></div>
+                            ) : <p className="text-sm text-green-400 mb-2 font-bold flex items-center gap-2"><window.Icons.Flame size={16}/> Ура! У вас безкоштовна доставка!</p>}
+                            <div className="w-full bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                                <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+                            </div>
                         </div>
+
+                        {/* СПИСОК ТОВАРІВ */}
                         <div className="bg-slate-800 rounded-2xl border border-white/10 overflow-hidden">
                             {cart.map(item => (
                                 <div key={item.id} className="p-4 flex gap-4 border-b border-white/5 items-center">
                                     <img src={item.images?.[0]} className="w-16 h-16 rounded object-cover"/>
-                                    <div className="flex-1"><h3 className="font-bold">{item.name}</h3><p className="text-sm text-gray-400">{item.price} ₴</p></div>
-                                    
-                                    {/* --- ОНОВЛЕНИЙ БЛОК КІЛЬКОСТІ (INPUT) --- */}
+                                    <div className="flex-1"><h3 className="font-bold text-white">{item.name}</h3><p className="text-sm text-gray-400">{item.price} ₴</p></div>
                                     <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-1 border border-white/5">
-                                        <button onClick={()=>updateQty(item.id, -1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition active:scale-90"><Icons.Minus size={16}/></button>
-                                        <input 
-                                            type="number" 
-                                            min="1" 
-                                            value={item.qty} 
-                                            onChange={(e) => {
-                                                const val = parseInt(e.target.value);
-                                                if (!isNaN(val) && val >= 1) updateQty(item.id, val - item.qty);
-                                            }}
-                                            className="w-12 h-8 bg-transparent text-center text-white font-bold outline-none text-sm appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                        />
-                                        <button onClick={()=>updateQty(item.id, 1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition active:scale-90"><Icons.Plus size={16}/></button>
+                                        <button onClick={()=>updateQty(item.id, -1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition"><window.Icons.Minus size={16}/></button>
+                                        <input type="number" value={item.qty} readOnly className="w-10 bg-transparent text-center text-white font-bold outline-none text-sm" />
+                                        <button onClick={()=>updateQty(item.id, 1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition"><window.Icons.Plus size={16}/></button>
                                     </div>
-                                    
-                                    <button onClick={()=>removeFromCart(item.id)} className="text-gray-500 hover:text-red-500 p-2"><Icons.Trash2 size={18}/></button>
+                                    <button onClick={()=>removeFromCart(item.id)} className="text-gray-500 hover:text-red-500 p-2"><window.Icons.Trash2 size={18}/></button>
                                 </div>
                             ))}
                         </div>
+
+                        {/* ПРОМОКОД */}
                         <div className="bg-slate-800 rounded-xl p-4 border border-white/10 flex items-center gap-2">
-                            <Icons.Ticket className="text-violet-500" />
+                            <window.Icons.Ticket className="text-violet-500" />
                             {appliedPromo ? (
                                 <div className="flex-1 flex justify-between items-center"><span className="text-green-400 font-bold">Код {appliedPromo.code} застосовано!</span><button onClick={cancelPromo} className="text-xs text-gray-400 hover:text-white underline">Скасувати</button></div>
                             ) : (
-                                <><input value={promoInput} onChange={e=>setPromoInput(e.target.value)} placeholder="Маєте промокод?" className="flex-1 bg-transparent text-white outline-none placeholder-gray-500 text-sm"/><button onClick={()=> {const p = promocodes.find(c=>c.code===promoInput.toUpperCase()); if(p && p.usedCount < p.maxUses) applyPromo(promoInput); else alert("Невірний код"); setPromoInput("")}} className="text-sm font-bold text-violet-400 hover:text-white">ОК</button></>
+                                <><input value={promoInput} onChange={e=>setPromoInput(e.target.value)} placeholder="Маєте промокод?" className="flex-1 bg-transparent text-white outline-none placeholder-gray-500 text-sm"/><button onClick={()=> {const p = promocodes.find(c=>c.code===promoInput.toUpperCase()); if(p && p.usedCount < p.maxUses) applyPromo(promoInput); else alert("Невірний код"); setPromoInput("")}} className="text-sm font-bold text-violet-400 hover:text-white transition">ОК</button></>
                             )}
                         </div>
-                        <div className="space-y-2 text-right">
-                             <div className="flex justify-between items-center text-gray-400"><span>Сума:</span><span>{cartTotal} ₴</span></div>
-                             {discountAmount > 0 && <div className="flex justify-between items-center text-green-400"><span>Знижка:</span><span>-{discountAmount} ₴</span></div>}
-                             <div className="flex justify-between items-center text-xl font-bold text-white"><span>Разом:</span><span className="text-violet-400">{finalTotal} ₴</span></div>
+
+                        {/* ФОРМА ОФОРМЛЕННЯ */}
+                        <div className="bg-slate-800 p-6 rounded-2xl border border-white/10 space-y-4 shadow-xl">
+                            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2"><window.Icons.User size={20} className="text-violet-400"/> Дані для доставки</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input required placeholder="Ваше Ім'я та Прізвище" className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                    value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                                <input required type="tel" placeholder="Номер телефону" className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                    value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                                <input required placeholder="Місто" className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                    value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
+                                <input required placeholder="Відділення / Поштомат НП" className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                    value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} />
+                            </div>
+                            <input placeholder="Telegram нік (необов'язково)" className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                value={formData.telegram} onChange={e => setFormData({...formData, telegram: e.target.value})} />
+                            <textarea placeholder="Коментар до замовлення..." className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition h-24 resize-none" 
+                                value={formData.comment} onChange={e => setFormData({...formData, comment: e.target.value})}></textarea>
+
+                            <div className="flex gap-4 p-2">
+                                <label className="flex-1 flex items-center gap-2 bg-slate-900 p-3 rounded-xl border border-white/5 cursor-pointer">
+                                    <input type="radio" name="payment" checked={formData.payment === 'card'} onChange={() => setFormData({...formData, payment: 'card'})} className="accent-violet-500"/>
+                                    <span className="text-sm text-gray-300">На карту</span>
+                                </label>
+                                <label className="flex-1 flex items-center gap-2 bg-slate-900 p-3 rounded-xl border border-white/5 cursor-pointer">
+                                    <input type="radio" name="payment" checked={formData.payment === 'cod'} onChange={() => setFormData({...formData, payment: 'cod'})} className="accent-violet-500"/>
+                                    <span className="text-sm text-gray-300">Післяплата</span>
+                                </label>
+                            </div>
                         </div>
-                        <button onClick={() => changeRoute('checkout')} className="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-4 rounded-xl">Оформити</button>
+
+                        {/* ПІДСУМОК ТА КНОПКА */}
+                        <div className="space-y-4">
+                            <div className="space-y-2 text-right">
+                                <div className="flex justify-between items-center text-gray-400"><span>Сума:</span><span>{cartTotal} ₴</span></div>
+                                {discountAmount > 0 && <div className="flex justify-between items-center text-green-400"><span>Знижка:</span><span>-{discountAmount} ₴</span></div>}
+                                <div className="flex justify-between items-center text-2xl font-bold text-white"><span>Разом:</span><span className="text-violet-400">{finalTotal} ₴</span></div>
+                            </div>
+                            <button 
+                                onClick={handleOrderSubmit} 
+                                disabled={isSending || !formData.name || !formData.phone || !formData.city} 
+                                className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-lg ${isSending ? 'bg-slate-700' : 'bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:shadow-violet-500/25 active:scale-95'}`}
+                            >
+                                {isSending ? 'Надсилаємо...' : 'ПІДТВЕРДИТИ ЗАМОВЛЕННЯ'}
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
