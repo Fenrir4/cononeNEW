@@ -174,7 +174,64 @@ window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, pr
     const finalTotal = Math.max(0, cartTotal - discountAmount);
     const neededForFreeDelivery = Math.max(0, FREE_DELIVERY_LIMIT - finalTotal);
     const progressPercent = Math.min(100, (finalTotal / FREE_DELIVERY_LIMIT) * 100);
+    
+    const [formData, setFormData] = useState({ name: '', phone: '', city: '', department: '', payment: 'card', comment: '', telegram: '' });
+    const [isSending, setIsSending] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
 
+    const handleOrderSubmit = async (e) => {
+        e.preventDefault();
+        setIsSending(true);
+
+        const orderData = {
+            date: new Date().toISOString(),
+            status: 'new',
+            total: finalTotal,
+            subtotal: cartTotal,
+            discount: discountAmount,
+            promoCode: appliedPromo ? appliedPromo.code : null,
+            paymentMethod: formData.payment,
+            isFreeShipping: finalTotal >= FREE_DELIVERY_LIMIT, // Перераховуємо тут для надійності
+            client: {
+                name: formData.name,
+                phone: formData.phone,
+                city: formData.city,
+                department: formData.department,
+                telegram: formData.telegram,
+                comment: formData.comment
+            },
+            items: cart.map(item => ({
+                id: item.id,
+                name: item.name,
+                price: item.price,
+                qty: item.qty,
+                category: item.category || 'Товар'
+            }))
+        };
+
+        try {
+            if (window.firebase) {
+                const db = firebase.firestore();
+                await db.collection('orders').add(orderData);
+                
+                if (appliedPromo) {
+                    const promoRef = db.collection('promocodes').where('code', '==', appliedPromo.code).limit(1);
+                    const snapshot = await promoRef.get();
+                    if (!snapshot.empty) {
+                        snapshot.docs[0].ref.update({ usedCount: firebase.firestore.FieldValue.increment(1) });
+                    }
+                }
+            }
+            setIsSuccess(true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (error) {
+            console.error("Error:", error);
+            alert("Помилка замовлення. Спробуйте пізніше.");
+        } finally {
+            setIsSending(false);
+        }
+    };
+   
     return (
         <div className="min-h-screen bg-slate-900 py-12 px-4 animate-fade-in">
             <div className="max-w-3xl mx-auto">
