@@ -36,7 +36,7 @@ const App = () => {
     const InfoPage = window.InfoPage;
     const HeroSlider = window.HeroSlider;
     const ProductCard = window.ProductCard;
-    const MobileBottomNav = window.MobileBottomNav; // <-- Додали це!
+    const MobileBottomNav = window.MobileBottomNav; 
 
     // DB INIT
     let db = null; try { if (window.firebase && firebase.apps.length) db = firebase.firestore(); } catch (e) {}
@@ -165,7 +165,8 @@ const App = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                        {/* ЗМІНЕНО: grid-cols-2 для мобільних */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8">
                             {displayedProducts.length > 0 ? (
                                 displayedProducts.map(product => <ProductCard key={product.id} product={product} navigateToProduct={navigateToProduct} addToCart={addToCart} wishlist={wishlist} toggleWishlist={toggleWishlist} />)
                             ) : (
@@ -200,15 +201,15 @@ const App = () => {
                             <ul className="space-y-4 text-gray-400 text-sm">
                                 <li className="flex items-center gap-3">
                                     <span className="bg-white/5 p-2 rounded-lg text-white"><Icons.Phone size={18}/></span>
-                                    <span>+380 93 123 45 67</span>
+                                    <a href="tel:+380633930397" className="hover:text-white transition">+38 (063) 393 03 97</a>
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <span className="bg-white/5 p-2 rounded-lg text-blue-400"><Icons.Send size={18}/></span>
-                                    <a href="#" className="hover:text-white transition">@night_secret_manager</a>
+                                    <a href="https://t.me/nightsecret_manager" target="_blank" className="hover:text-white transition">@nightsecret_manager</a>
                                 </li>
                                 <li className="flex items-center gap-3">
                                     <span className="bg-white/5 p-2 rounded-lg text-pink-500"><Icons.Instagram size={18}/></span>
-                                    <a href="#" className="hover:text-white transition">@night_secret_shop</a>
+                                    <a href="https://www.instagram.com/nightsecret.shop?igsh=Z3NpcDgyMm92aGN5" target="_blank" className="hover:text-white transition">@nightsecret.shop</a>
                                 </li>
                             </ul>
                         </div>
@@ -233,7 +234,7 @@ const App = () => {
                 </div>
             </footer>
 
-            {/* MOBILE BOTTOM NAV (Показується тільки на мобільних) */}
+            {/* MOBILE BOTTOM NAV */}
             <MobileBottomNav activeView={activeView} changeRoute={changeRoute} cartCount={cart.reduce((a,b)=>a+b.qty,0)} />
         </div>
     );
