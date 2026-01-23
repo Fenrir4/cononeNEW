@@ -167,15 +167,14 @@ window.WishlistView = ({ wishlist, products, navigateToProduct, addToCart, toggl
 };
 
 window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, promocodes, applyPromo, appliedPromo, cancelPromo, setCart }) => {
+    // Витягуємо useState з React, щоб не було помилок
     const { useState } = React;
-    
-    // СТАН (Логіка)
+
     const [promoInput, setPromoInput] = useState("");
     const [formData, setFormData] = useState({ name: '', phone: '', city: '', department: '', payment: 'card', comment: '', telegram: '' });
     const [isSending, setIsSending] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
 
-    // РОЗРАХУНКИ
     const FREE_DELIVERY_LIMIT = 2000;
     let discountAmount = 0;
     if (appliedPromo) { 
@@ -185,9 +184,9 @@ window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, pr
     const neededForFreeDelivery = Math.max(0, FREE_DELIVERY_LIMIT - finalTotal);
     const progressPercent = Math.min(100, (finalTotal / FREE_DELIVERY_LIMIT) * 100);
 
-    // ФУНКЦІЯ ВІДПРАВКИ В БАЗУ
+    // --- ФУНКЦІЯ ВІДПРАВКИ ЗАМОВЛЕННЯ ---
     const handleOrderSubmit = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
         setIsSending(true);
 
         const orderData = {
@@ -211,8 +210,7 @@ window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, pr
                 id: item.id,
                 name: item.name,
                 price: item.price,
-                qty: item.qty,
-                category: item.category || 'Товар'
+                qty: item.qty
             }))
         };
 
@@ -230,15 +228,139 @@ window.CartView = ({ cart, updateQty, removeFromCart, changeRoute, cartTotal, pr
                 }
             }
             setIsSuccess(true);
-            if (setCart) setCart([]); // Очищуємо кошик після успіху
+            if (typeof setCart === 'function') setCart([]); // Очищуємо кошик
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
             console.error("Error:", error);
-            alert("Помилка замовлення. Спробуйте пізніше або напишіть нам.");
+            alert("Помилка замовлення. Спробуйте пізніше.");
         } finally {
             setIsSending(false);
         }
     };
+
+    // ЕКРАН ПІСЛЯ ЗАМОВЛЕННЯ
+    if (isSuccess) {
+        return (
+            <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6 animate-fade-in">
+                <div className="w-24 h-24 bg-green-500 rounded-full flex items-center justify-center mb-6 shadow-lg shadow-green-500/30 animate-bounce">
+                    <window.Icons.Check size={48} className="text-white" />
+                </div>
+                <h2 className="text-3xl font-bold text-white mb-4">Замовлення прийнято! 🎉</h2>
+                <p className="text-gray-400 mb-8 text-lg">Ми вже отримали ваші дані та готуємо відправку.</p>
+                <button onClick={() => changeRoute('home')} className="bg-violet-600 hover:bg-violet-700 text-white px-8 py-3 rounded-xl font-bold transition shadow-lg">На головну</button>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-900 py-12 px-4 animate-fade-in">
+            <div className="max-w-3xl mx-auto">
+                <h1 className="text-3xl font-bold text-white mb-8">Кошик</h1>
+                
+                {cart.length === 0 ? (
+                    <div className="text-center py-20 bg-slate-800 rounded-2xl border border-white/10">
+                        <window.Icons.ShoppingBag size={64} className="mx-auto text-gray-600 mb-4"/>
+                        <p className="text-gray-400">Кошик порожній</p>
+                        <button onClick={() => changeRoute('home')} className="mt-4 text-violet-400 font-bold">До покупок</button>
+                    </div>
+                ) : (
+                    <div className="space-y-6">
+                        {/* ПРОГРЕС-БАР ДОСТАВКИ */}
+                        <div className="bg-slate-800 rounded-xl p-4 border border-white/10">
+                            {neededForFreeDelivery > 0 ? (
+                                <p className="text-sm text-white mb-2 font-bold">Додайте товарів ще на <span className="text-violet-400">{neededForFreeDelivery} ₴</span> для безкоштовної доставки!</p>
+                            ) : <p className="text-sm text-green-400 mb-2 font-bold flex items-center gap-2"><window.Icons.Flame size={16}/> Ура! У вас безкоштовна доставка!</p>}
+                            <div className="w-full bg-slate-700 h-2.5 rounded-full overflow-hidden">
+                                <div className="bg-gradient-to-r from-violet-600 to-fuchsia-500 h-2.5 rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }}></div>
+                            </div>
+                        </div>
+
+                        {/* ТОВАРИ В КОШИКУ */}
+                        <div className="bg-slate-800 rounded-2xl border border-white/10 overflow-hidden">
+                            {cart.map(item => (
+                                <div key={item.id} className="p-4 flex gap-4 border-b border-white/5 items-center last:border-0">
+                                    <img src={item.images?.[0]} className="w-16 h-16 rounded object-cover flex-shrink-0 bg-slate-700"/>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="font-bold text-white text-sm md:text-base truncate">{item.name}</h3>
+                                        <p className="text-sm text-violet-400 font-bold">{item.price} ₴</p>
+                                    </div>
+                                    <div className="flex items-center gap-1 bg-slate-900 rounded-lg p-1 border border-white/5">
+                                        <button onClick={()=>updateQty(item.id, -1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition"><window.Icons.Minus size={16}/></button>
+                                        <input type="number" readOnly value={item.qty} className="w-10 bg-transparent text-center text-white font-bold outline-none text-sm" />
+                                        <button onClick={()=>updateQty(item.id, 1)} className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-white transition"><window.Icons.Plus size={16}/></button>
+                                    </div>
+                                    <button onClick={()=>removeFromCart(item.id)} className="text-gray-500 hover:text-red-500 p-2 transition"><window.Icons.Trash2 size={18}/></button>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* ПРОМОКОД */}
+                        <div className="bg-slate-800 rounded-xl p-4 border border-white/10 flex items-center gap-2">
+                            <window.Icons.Ticket className="text-violet-500" />
+                            {appliedPromo ? (
+                                <div className="flex-1 flex justify-between items-center text-sm">
+                                    <span className="text-green-400 font-bold">Код {appliedPromo.code} застосовано!</span>
+                                    <button onClick={cancelPromo} className="text-xs text-gray-400 hover:text-white underline">Скасувати</button>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex gap-2">
+                                    <input value={promoInput} onChange={e=>setPromoInput(e.target.value)} placeholder="Маєте промокод?" className="flex-1 bg-transparent text-white outline-none placeholder-gray-500 text-sm"/>
+                                    <button onClick={()=> {const p = promocodes.find(c=>c.code===promoInput.toUpperCase()); if(p && p.usedCount < p.maxUses) applyPromo(promoInput); else alert("Невірний код"); setPromoInput("")}} className="text-sm font-bold text-violet-400 hover:text-white">ОК</button>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ФОРМА ДАНИХ (Тут клієнт вводить ПІБ та Телефон) */}
+                        <div className="bg-slate-800 p-6 rounded-2xl border border-white/10 space-y-4">
+                            <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">📫 Дані для доставки</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input required placeholder="ПІБ отримувача" className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                    value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                                <input required type="tel" placeholder="Номер телефону" className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                    value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                                <input required placeholder="Місто" className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                    value={formData.city} onChange={e => setFormData({...formData, city: e.target.value})} />
+                                <input required placeholder="Відділення / Поштомат НП" className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                    value={formData.department} onChange={e => setFormData({...formData, department: e.target.value})} />
+                            </div>
+                            <input placeholder="Нік в Telegram (необов'язково)" className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition" 
+                                value={formData.telegram} onChange={e => setFormData({...formData, telegram: e.target.value})} />
+                            <textarea placeholder="Коментар або побажання..." className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-violet-500 transition h-20 resize-none text-sm" 
+                                value={formData.comment} onChange={e => setFormData({...formData, comment: e.target.value})}></textarea>
+                            
+                            <div className="flex gap-4 p-1">
+                                <label className="flex-1 flex items-center gap-2 bg-slate-900 p-3 rounded-xl border border-white/5 cursor-pointer">
+                                    <input type="radio" name="payment" checked={formData.payment === 'card'} onChange={() => setFormData({...formData, payment: 'card'})} className="accent-violet-500"/>
+                                    <span className="text-sm text-gray-300">Оплата на карту</span>
+                                </label>
+                                <label className="flex-1 flex items-center gap-2 bg-slate-900 p-3 rounded-xl border border-white/5 cursor-pointer">
+                                    <input type="radio" name="payment" checked={formData.payment === 'cod'} onChange={() => setFormData({...formData, payment: 'cod'})} className="accent-violet-500"/>
+                                    <span className="text-sm text-gray-300">Післяплата</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* ПІДСУМОК ТА КНОПКА */}
+                        <div className="space-y-4 pt-4 border-t border-white/5">
+                            <div className="space-y-2 text-right">
+                                <div className="flex justify-between items-center text-gray-400"><span>Сума:</span><span>{cartTotal} ₴</span></div>
+                                {discountAmount > 0 && <div className="flex justify-between items-center text-green-400"><span>Знижка:</span><span>-{discountAmount} ₴</span></div>}
+                                <div className="flex justify-between items-center text-2xl font-bold text-white"><span>Разом:</span><span className="text-violet-400">{finalTotal} ₴</span></div>
+                            </div>
+                            <button 
+                                onClick={handleOrderSubmit} 
+                                disabled={isSending || !formData.name || !formData.phone}
+                                className={`w-full py-4 rounded-xl font-bold text-white transition-all shadow-lg flex items-center justify-center gap-2 ${isSending ? 'bg-slate-700' : 'bg-violet-600 hover:bg-violet-700 active:scale-[0.98]'}`}
+                            >
+                                {isSending ? <window.Icons.RefreshCw className="animate-spin" size={20}/> : 'ПІДТВЕРДИТИ ЗАМОВЛЕННЯ'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 
     // ЕКРАН УСПІХУ
     if (isSuccess) {
