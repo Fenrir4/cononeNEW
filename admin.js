@@ -9,6 +9,23 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
     // Стан для форми промокодів
     const [promoForm, setPromoForm] = useState({ code: '', type: 'fixed', value: 0, maxUses: 100 });
 
+    // --- ВСТАВКА 1: Логіка замовлень ---
+    const [orders, setOrders] = useState([]);
+    
+    useEffect(() => {
+        if (tab === 'orders' && window.firebase) {
+            const db = firebase.firestore();
+            const unsubscribe = db.collection('orders')
+                .orderBy('date', 'desc')
+                .limit(50)
+                .onSnapshot(snapshot => {
+                    setOrders(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+                });
+            return () => unsubscribe();
+        }
+    }, [tab]);
+    // -----------------------------------
+
     let db = null;
     try { 
         if (window.firebase && firebase.apps.length) {
@@ -472,6 +489,7 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
                 <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
                     <h1 className="text-3xl font-bold text-white flex items-center gap-3"><window.Icons.Settings className="text-violet-500" size={32} /> Панель адміністратора</h1>
                     <div className="flex gap-2 bg-slate-800 p-1.5 rounded-xl border border-white/10">
+                        <button onClick={() => setTab('orders')} className={`px-4 py-2 rounded-lg font-bold transition whitespace-nowrap flex items-center gap-2 ${tab === 'orders' ? 'bg-violet-600 text-white shadow-lg' : 'bg-slate-700 text-gray-400 hover:text-white'}`}><window.Icons.ShoppingBag size={18}/> Замовлення </button>
                         <button onClick={()=>setTab('products')} className={`px-6 py-2.5 rounded-lg font-bold transition flex items-center gap-2 ${tab==='products' ? 'bg-violet-600 text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}><window.Icons.ShoppingBag size={18}/> Товари</button>
                         <button onClick={()=>setTab('promos')} className={`px-6 py-2.5 rounded-lg font-bold transition flex items-center gap-2 ${tab==='promos' ? 'bg-violet-600 text-white shadow-lg' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}><window.Icons.Ticket size={18}/> Промокоди</button>
                     </div>
@@ -516,6 +534,45 @@ window.AdminPanel = ({ products, setProducts, setEditId, promocodes, setPromocod
                     <div className="grid lg:grid-cols-3 gap-8">
                         <div className="lg:col-span-1"><div className="bg-slate-800 p-6 rounded-2xl border border-white/10 sticky top-24 shadow-xl"><h3 className="font-bold text-xl mb-6 text-white flex items-center gap-2"><window.Icons.Plus className="text-green-500"/> Новий промокод</h3><form onSubmit={handleCreatePromo} className="space-y-5"><div><label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Код купона</label><input required className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 uppercase text-white font-mono text-lg focus:border-green-500 outline-none" placeholder="Напр. SALE2024" value={promoForm.code} onChange={e=>setPromoForm({...promoForm, code:e.target.value.toUpperCase()})}/></div><div className="grid grid-cols-2 gap-4"><div><label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Тип</label><select className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 text-white outline-none" value={promoForm.type} onChange={e=>setPromoForm({...promoForm, type:e.target.value})}><option value="fixed">Гривні (₴)</option><option value="percent">Відсоток (%)</option></select></div><div><label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Значення</label><input required type="number" className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 text-white outline-none" placeholder="0" value={promoForm.value} onChange={e=>setPromoForm({...promoForm, value:Number(e.target.value)})}/></div></div><div><label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 block">Ліміт використань</label><input required type="number" className="w-full bg-slate-900 p-4 rounded-xl border border-white/10 text-white outline-none" placeholder="100" value={promoForm.maxUses} onChange={e=>setPromoForm({...promoForm, maxUses:Number(e.target.value)})}/></div><button className="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95">Створити промокод</button></form></div></div>
                         <div className="lg:col-span-2 space-y-4">{promocodes.length === 0 && (<div className="text-center py-20 bg-slate-800 rounded-3xl border border-dashed border-white/10"><window.Icons.Ticket size={48} className="mx-auto text-gray-600 mb-4"/><p className="text-gray-400 text-lg">Створіть свій перший промокод</p></div>)}{promocodes.map(promo => { const percentUsed = Math.min(100, (promo.usedCount / promo.maxUses) * 100); const isExhausted = promo.usedCount >= promo.maxUses; return (<div key={promo.id} className={`bg-slate-800 p-6 rounded-2xl border transition group hover:border-white/20 shadow-lg ${isExhausted ? 'border-red-500/30 opacity-75' : 'border-white/10'}`}><div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6"><div className="flex-1"><div className="flex items-center gap-4 mb-2"><span className="text-2xl font-black text-white tracking-widest bg-slate-900 px-4 py-2 rounded-lg border border-dashed border-gray-600 font-mono select-all">{promo.code}</span><span className={`font-bold text-lg ${promo.type === 'percent' ? 'text-fuchsia-400' : 'text-green-400'}`}>-{promo.value} {promo.type === 'percent' ? '%' : '₴'}</span>{isExhausted && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 rounded uppercase">Вичерпано</span>}</div><div className="flex items-center gap-3 text-sm text-gray-400"><span>Використано: <strong className="text-white">{promo.usedCount}</strong> з {promo.maxUses}</span><div className="flex-1 h-2 bg-slate-900 rounded-full overflow-hidden w-32 md:w-48"><div className={`h-full rounded-full ${isExhausted ? 'bg-red-500' : 'bg-green-500'}`} style={{width: `${percentUsed}%`}}></div></div></div></div><div className="flex items-center gap-3"><button onClick={()=>addPromoUses(promo)} className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center gap-2"><window.Icons.Plus size={16}/> Ліміт</button><button onClick={()=>handleDeletePromo(promo.id)} className="bg-red-500/10 hover:bg-red-600 text-red-500 hover:text-white px-4 py-2 rounded-lg text-sm font-bold transition border border-red-500/20">Видалити</button></div></div></div>)})}</div>
+                    </div>
+                )}
+                {tab === 'orders' && (
+                    <div className="space-y-4 animate-fade-in">
+                        <h2 className="text-2xl font-bold mb-4">Останні замовлення</h2>
+                        {orders.length === 0 && <div className="text-center py-20 text-gray-500 border-2 border-dashed border-gray-700 rounded-xl">Замовлень поки немає 📭</div>}
+                        
+                        {orders.map(order => (
+                            <div key={order.id} className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-md hover:border-violet-500/50 transition">
+                                <div className="flex justify-between items-start border-b border-white/5 pb-3 mb-3">
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-xs font-mono text-violet-400">#{order.id.slice(0,6)}</span>
+                                            <span className="text-xs text-gray-500">{new Date(order.date).toLocaleString()}</span>
+                                        </div>
+                                        <div className="font-bold text-white text-lg">{order.client?.name}</div>
+                                        <div className="text-sm text-violet-300">{order.client?.phone}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xl font-bold text-green-400">{order.total} ₴</div>
+                                        <div className="text-xs uppercase font-bold tracking-wider text-gray-400">
+                                            {order.paymentMethod === 'card' ? '💳 На карту' : '📦 Післяплата'}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="space-y-1 bg-slate-900/50 p-3 rounded-lg mb-3">
+                                    {order.items?.map((item, i) => (
+                                        <div key={i} className="flex justify-between text-sm text-gray-300">
+                                            <span>• {item.name}</span>
+                                            <span className="text-gray-500 whitespace-nowrap">{item.qty} x {item.price}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="text-xs text-gray-400">
+                                    📍 {order.client?.city}, {order.client?.department} 
+                                    {order.client?.comment && <div className="mt-1 text-yellow-500">⚠️ "{order.client.comment}"</div>}
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 )}
             </div>
